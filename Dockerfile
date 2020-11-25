@@ -33,31 +33,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y php7.0-c
 
 WORKDIR /tmp/virtinstall/
 
-# virtuoso - install adapted from https://github.com/askomics/docker-virtuoso and https://github.com/tenforce/docker-virtuoso/blob/master/Dockerfile
-
-# virtuoso - Environment variables
-ENV VIRTUOSO https://github.com/openlink/virtuoso-opensource.git
-ENV VIRTUOSO_DIR /virtuoso-opensource
-ENV VIRTUOSO_VERSION 7.2.5.1
-
-# virtuoso - Install prerequisites, Download, Patch, compile and install
-RUN apt-get update \
-        && apt-get install -y git build-essential autotools-dev autoconf automake unzip wget net-tools libtool flex bison gperf gawk m4 libssl-dev libreadline-dev openssl crudini \
-        && apt-get install -y libssl1.0-dev \
-	&& git clone -b v${VIRTUOSO_VERSION} --single-branch --depth=1 ${VIRTUOSO} ${VIRTUOSO_DIR} \
-	&& sed -i 's/maxrows\ \:\= 1024\*1024/maxrows\ \:\=  64\*1024\*1024\-2/' ${VIRTUOSO_DIR}/libsrc/Wi/sparql_io.sql \
-	&& cd ${VIRTUOSO_DIR} \ 
-        && ./autogen.sh \
-        && export CFLAGS="-O2 -m64" && ./configure --disable-bpel-vad --enable-conductor-vad --enable-fct-vad --disable-dbpedia-vad --disable-demo-vad --disable-isparql-vad --disable-ods-vad --disable-sparqldemo-vad --disable-syncml-vad --disable-tutorial-vad --with-readline --program-transform-name="s/isql/isql-v/" \
-        && make -j`nproc` && make install \
-        && ln -s /usr/local/virtuoso-opensource/var/lib/virtuoso/ /var/lib/virtuoso \
-        && ln -s /var/lib/virtuoso/db /data \
-        && cd .. \
-        && rm -r ${VIRTUOSO_DIR} \
-        && apt remove --purge -y build-essential autotools-dev autoconf automake unzip wget net-tools libtool flex bison gperf gawk m4 libssl-dev libreadline-dev \
-        && apt autoremove -y \
-        && apt autoclean
-
 # mariadb
 RUN curl -LsS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
 RUN apt-get -yq update && \
@@ -65,15 +40,8 @@ RUN apt-get -yq update && \
    DEBIAN_FRONTEND=noninteractive apt-get -yq install mariadb-server mariadb-client 
 RUN mkdir -p /var/run/mysqld && chown mysql:mysql /var/run/mysqld/
 
-# virtuoso - Add Virtuoso bin to the PATH
-ENV PATH /usr/local/virtuoso-opensource/bin/:$PATH
 
 # virtuoso - Copy files
-RUN mkdir -p /virtuoso_data/
-COPY ./docker-virtuoso/virtuoso.ini /virtuoso_data/virtuoso.ini
-COPY ./docker-virtuoso/dump_nquads_procedure.sql /virtuoso_data/dump_nquads_procedure.sql
-COPY ./docker-virtuoso/clean-logs.sh /virtuoso_data/clean-logs.sh
-COPY ./docker-virtuoso/virtuoso.sh /virtuoso_data/virtuoso.sh
 COPY ./container-files/startall.sh /startall.sh
 
 # project and maven setup from previous chain
